@@ -86,6 +86,7 @@ textarea{height:140px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
 
 <div id="lib">
   <h1>자막 플레이어</h1>
+  <div id="notice" style="display:none;margin:10px 0 14px;padding:12px;border-radius:12px;background:rgba(74,158,255,.15);border:1px solid var(--accent);font-size:14px;line-height:1.5"></div>
   <p class="sub">단축어로 번역한 영상이 여기에 저장돼. 자막은 드래그로 옮기고, 두 번 탭하면 자동 위치로 돌아가.</p>
 
   <h2>저장된 영상</h2>
@@ -96,7 +97,10 @@ textarea{height:140px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
   <input id="inUrl" placeholder="https://youtube.com/shorts/..." autocomplete="off" autocapitalize="off">
   <label for="inJson">자막 JSON (저장된 영상이면 비워둬도 돼)</label>
   <textarea id="inJson" placeholder='[{"s":0.4,"e":2.9,"ko":"...","note":"※ ..."}]'></textarea>
-  <div style="margin-top:12px"><button class="btn primary" id="btnOpen">열기</button></div>
+  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn primary" id="btnPaste">클립보드에서 붙여넣고 열기</button>
+    <button class="btn" id="btnOpen">열기</button>
+  </div>
   <div id="err"></div>
 </div>
 
@@ -381,10 +385,37 @@ $('#btnOpen').addEventListener('click', () => {
   location.hash = 'v=' + id;
 });
 
+/* 클립보드 붙여넣기: 단축어가 번역 JSON을 클립보드에 복사해두면 버튼 한 번으로 열기 */
+$('#btnPaste').addEventListener('click', async () => {
+  const err = $('#err'); err.textContent = '';
+  try{
+    const t = await navigator.clipboard.readText();
+    if (!t || t.indexOf('[') < 0){ err.textContent = '클립보드에 자막 JSON이 없어. 단축어를 다시 실행해줘.'; return; }
+    $('#inJson').value = t;
+    $('#btnOpen').click();
+  }catch(e){
+    err.textContent = '클립보드를 읽지 못했어. 아래 칸을 길게 눌러 직접 붙여넣고 "열기"를 눌러줘.';
+  }
+});
+
 /* ---------- 진입점 ---------- */
 function boot(){
   const p = readHash();
+  /* 링크도 이중 인코딩돼 들어올 수 있어 최대 3번 더 디코딩 */
+  if (p.u){
+    for (let i = 0; i < 3 && /%[0-9A-Fa-f]{2}/.test(p.u); i++){
+      try{ p.u = decodeURIComponent(p.u); }catch(e){ break; }
+    }
+  }
   const id = p.v || vidOf(p.u);
+  const notice = $('#notice');
+  notice.style.display = 'none';
+  if (p.c && id && p.d == null){
+    showLib(id);
+    notice.textContent = '번역이 클립보드에 복사돼 있어. 아래 "클립보드에서 붙여넣고 열기"를 눌러줘.';
+    notice.style.display = 'block';
+    return;
+  }
   if (p.d != null && id){
     /* 단축어에서 이중 인코딩돼 들어와도 '['가 보일 때까지 최대 3번 더 디코딩 */
     let raw = p.d;
