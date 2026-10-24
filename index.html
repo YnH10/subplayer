@@ -31,8 +31,8 @@ body[data-view="lib"] #stage{display:none}
   line-height:1.4;background:rgba(0,0,0,.5);padding:.2em .6em;border-radius:.3em;word-break:keep-all}
 
 #gear{position:fixed;z-index:10;top:calc(env(safe-area-inset-top) + 8px);right:calc(env(safe-area-inset-right) + 8px);
-  width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(0,0,0,.45);
-  color:var(--fg);font-size:18px;display:flex;align-items:center;justify-content:center;opacity:.55}
+  height:40px;padding:0 14px;border-radius:20px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16);
+  color:var(--fg);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px}
 #panel{position:fixed;z-index:11;top:calc(env(safe-area-inset-top) + 52px);right:calc(env(safe-area-inset-right) + 8px);
   width:min(300px,calc(100vw - 16px));background:var(--panel);border:1px solid var(--line);border-radius:14px;
   padding:10px;display:none;font-size:14px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
@@ -71,7 +71,7 @@ textarea{height:140px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
 <div id="stage">
   <div id="box"><div id="player"></div></div>
   <div id="sub"><span class="ko"></span><span class="note"></span></div>
-  <button id="gear" aria-label="설정">⚙︎</button>
+  <button id="gear" aria-label="자막 설정">⚙︎ 자막 설정</button>
   <div id="panel">
     <div class="row"><span class="lbl">글자 크기</span>
       <div class="grp"><button class="btn" data-act="size-">−</button><span class="val" id="vSize">100%</span><button class="btn" data-act="size+">+</button></div></div>
@@ -126,7 +126,8 @@ function vidOf(u){
 function isShortsUrl(u){ return /shorts\//.test(String(u || '')); }
 
 function parseSubs(raw){
-  const s = String(raw || '').replace(/```(?:json)?/g, '');
+  /* 구간별로 나눠 번역한 여러 배열( ][ 로 이어진 형태 )을 하나로 합침 */
+  const s = String(raw || '').replace(/```(?:json)?/g, '').replace(/\]\s*\[/g, ',');
   const a = s.indexOf('['), b = s.lastIndexOf(']');
   if (a < 0 || b < a) throw new Error('JSON 배열을 찾지 못했어');
   const arr = JSON.parse(s.slice(a, b + 1));
