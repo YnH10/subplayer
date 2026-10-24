@@ -385,13 +385,19 @@ $('#btnOpen').addEventListener('click', () => {
 function boot(){
   const p = readHash();
   const id = p.v || vidOf(p.u);
-  if (p.d && id){
+  if (p.d != null && id){
+    /* 단축어에서 이중 인코딩돼 들어와도 '['가 보일 때까지 최대 3번 더 디코딩 */
+    let raw = p.d;
+    for (let i = 0; i < 3 && raw.indexOf('[') < 0 && /%[0-9A-Fa-f]{2}/.test(raw); i++){
+      try{ raw = decodeURIComponent(raw); }catch(e){ break; }
+    }
     try{
       const prev = getRec(id);
-      saveRec({ id, short: isShortsUrl(p.u) || !!(prev && prev.short), title: prev && prev.title, subs: parseSubs(p.d), saved: Date.now() });
+      saveRec({ id, short: isShortsUrl(p.u) || !!(prev && prev.short), title: prev && prev.title, subs: parseSubs(raw), saved: Date.now() });
       history.replaceState(null, '', location.pathname + location.search + '#v=' + id);
     }catch(e){
-      alert('자막 데이터를 읽지 못했어: ' + e.message);
+      alert('자막 데이터를 읽지 못했어: ' + e.message +
+        '\n\n받은 길이: ' + raw.length + '자\n앞부분: ' + (raw.slice(0, 120) || '(비어 있음)'));
     }
   }
   const rec = id ? getRec(id) : null;
