@@ -126,11 +126,32 @@ function vidOf(u){
 function isShortsUrl(u){ return /shorts\//.test(String(u || '')); }
 
 function parseSubs(raw){
-  /* 구간별로 나눠 번역한 여러 배열( ][ 로 이어진 형태 )을 하나로 합침 */
-  const s = String(raw || '').replace(/```(?:json)?/g, '').replace(/\]\s*\[/g, ',');
-  const a = s.indexOf('['), b = s.lastIndexOf(']');
-  if (a < 0 || b < a) throw new Error('JSON 배열을 찾지 못했어');
-  const arr = JSON.parse(s.slice(a, b + 1));
+  /* 구간별 번역 결과에 섞인 설명 문장은 건너뛰고, 읽히는 JSON 배열만 모두 모아서 합침 */
+  const s = String(raw || '').replace(/```(?:json)?/g, '');
+  const arr = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < s.length; i++){
+    const ch = s[i];
+    if (inStr){
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"' && depth > 0){ inStr = true; continue; }
+    if (ch === '['){ if (depth === 0) start = i; depth++; }
+    else if (ch === ']' && depth > 0){
+      depth--;
+      if (depth === 0 && start >= 0){
+        try{
+          const part = JSON.parse(s.slice(start, i + 1));
+          if (Array.isArray(part)) part.forEach(x => { if (x && typeof x === 'object') arr.push(x); });
+        }catch(e){}
+        start = -1;
+      }
+    }
+  }
+  if (!arr.length) throw new Error('JSON 배열을 찾지 못했어');
   const list = arr
     .filter(x => x && isFinite(+x.s) && x.ko)
     .map(x => ({ s:+x.s, e: isFinite(+x.e) ? +x.e : NaN, ko:String(x.ko), note: x.note ? String(x.note) : '' }))
